@@ -6,8 +6,9 @@
   <meta name="referrer" content="no-referrer" />
   <meta name="theme-color" content="#fc1288" />
   <title>hiitsvicc • Profile</title>
-  <meta name="description" content="I can put anything you want here in link text Vicc ദ്ദി/ᐠ｡‸｡ᐟ\  ₊˚⊹♡ I can edit anything your talking to a programmer" />
+  <meta name="description" content="I can put anything you want here in link text Vicc ദ്ദി/ᐠ｡‸｡ᐟ\  ₊˚⊹♡ I can edit anything." />
   <link rel="icon" type="image/gif" href="ViccFav.gif" />
+  <link id="favIcon" rel="icon" type="image/gif" href="ViccFav.gif" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -1143,26 +1144,48 @@
       transform: translateX(-50%) translateY(0);
     }
 
-    @media (max-width: 860px) {
-      .profile_header_content {
-        grid-template-columns: 1fr;
-        justify-items: center;
-        text-align: center;
-      }
-      .persona_name_row, .header_real_name {
-        justify-content: center;
-      }
-      .profile_header_badgeinfo {
-        width: 100%;
-        max-width: 340px;
-      }
-      .profile_content_inner {
-        grid-template-columns: 1fr;
-      }
-      .art_showcase_layout {
-        justify-content: center;
-      }
-    }
+@media (max-width: 860px) {
+  .profile_header_content {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+  .persona_name_row, .header_real_name {
+    justify-content: center;
+  }
+  .profile_header_badgeinfo {
+    width: 100%;
+    max-width: 340px;
+  }
+  .profile_content_inner {
+    grid-template-columns: 1fr;
+  }
+
+  /* Mobile layout fixer */
+  .profile_leftcol {
+    display: contents;
+  }
+  .profile_leftcol > *, .profile_rightcol {
+    min-width: 0;
+  }
+
+  .profile_leftcol > .profile_customization:nth-child(1) {
+    order: 1;
+  }
+  .profile_rightcol {
+    order: 2;
+  }
+  .profile_leftcol > .profile_customization:nth-child(2) {
+    order: 3;
+  }
+  .profile_leftcol > .profile_customization:nth-child(3) {
+    order: 4;
+  }
+
+  .art_showcase_layout {
+    justify-content: center;
+  }
+}
   </style>
 </head>
 <body>
@@ -1908,7 +1931,6 @@ let parallaxTicking = false;
 window.addEventListener('scroll', () => {
   if (!parallaxTicking) {
     window.requestAnimationFrame(() => {
-      // 0.28 controls the speed (0.15 = subtle, 0.45 = dramatic)
       const offset = window.scrollY * -0.28;
       bgEl?.style.setProperty('--parallax-y', `${offset.toFixed(1)}px`);
       parallaxTicking = false;
@@ -2015,6 +2037,44 @@ window.addEventListener('scroll', () => {
       fetchLanyardRest();
       connectSocket();
     })();
+    /* --- Animated GIF favicon fix for chrome/edge. gemini helped a lot with this --- */
+(async function animateFavicon() {
+  if (!('ImageDecoder' in window)) return; // Firefox already animates GIF favicons natively
+  const link = document.getElementById('favIcon') || document.querySelector("link[rel*='icon']");
+  if (!link) return;
+
+  try {
+    const res = await fetch('ViccFav.gif');
+    const buf = await res.arrayBuffer();
+    const decoder = new ImageDecoder({ data: buf, type: 'image/gif' });
+    await decoder.tracks.ready;
+    const frameCount = decoder.tracks.selectedTrack.frameCount;
+    if (frameCount <= 1) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    let frameIdx = 0;
+
+    async function stepFrame() {
+      const { image } = await decoder.decode({ frameIndex: frameIdx });
+      ctx.clearRect(0, 0, 32, 32);
+      ctx.drawImage(image, 0, 0, 32, 32);
+      link.type = 'image/png';
+      link.href = canvas.toDataURL('image/png');
+
+      // GIF duration is in microseconds; default to 100ms if unspecified
+      const delayMs = image.duration ? Math.max(40, image.duration / 1000) : 100;
+      image.close();
+      frameIdx = (frameIdx + 1) % frameCount;
+      setTimeout(stepFrame, delayMs);
+    }
+
+    stepFrame();
+  } catch {
+  }
+})();
   </script>
 
   <script type="module">
